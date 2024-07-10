@@ -1,17 +1,18 @@
-
-'use client'
+"use client";
 // FidContext.js
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode } from "react";
 
 type FidContextType = {
-  fid: number;
-  setFid: React.Dispatch<React.SetStateAction<number>>;
+  fid: number | null;
+  setFid: React.Dispatch<React.SetStateAction<number | null>>;
 };
 
 const FidContext = createContext<FidContextType | null>(null);
 
-export const FidProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [fid, setFid] = useState<number>(0);
+export const FidProvider: React.FC<{ children: ReactNode }> = ({
+  children,
+}) => {
+  const [fid, setFid] = useState<number | null>(null);
 
   return (
     <FidContext.Provider value={{ fid, setFid }}>
@@ -23,7 +24,7 @@ export const FidProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 export const useFid = () => {
   const context = useContext(FidContext);
   if (!context) {
-    throw new Error('useFid must be used within a FidProvider');
+    throw new Error("useFid must be used within a FidProvider");
   }
   return context;
 };

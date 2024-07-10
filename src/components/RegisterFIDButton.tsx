@@ -1,9 +1,8 @@
 import {
-  usePrepareContractWrite,
-  useContractWrite,
+  useWriteContract,
   useAccount,
-  useWaitForTransaction,
-  useContractRead,
+  useWaitForTransactionReceipt,
+  useReadContract,
 } from "wagmi";
 import { useFid } from "@/providers/fidContext";
 
@@ -11,6 +10,7 @@ import { useEffect } from "react";
 import PuffLoader from "react-spinners/PuffLoader";
 import { IdGatewayABI } from "@/abi/IdGatewayABI";
 import { toast } from "sonner";
+import { isAddress } from "viem";
 
 export default function RegisterFIDButton({
   recoveryAddress,
@@ -22,36 +22,39 @@ export default function RegisterFIDButton({
   const { fid, setFid } = useFid();
   const { address, isConnected } = useAccount();
 
-  const { data: price }: { data: bigint | undefined } = useContractRead({
+  const { data: price }: { data: bigint | undefined } = useReadContract({
     address: "0x00000000Fc25870C6eD6b6c7E41Fb078b7656f69",
     abi: IdGatewayABI,
     functionName: "price",
     chainId: 10,
   });
 
-  const { config, isError, error } = usePrepareContractWrite({
-    address: "0x00000000Fc25870C6eD6b6c7E41Fb078b7656f69",
-    abi: IdGatewayABI,
-    functionName: "register",
-    args: [recoveryAddress],
-    enabled: Boolean(recoveryAddress),
-    value: BigInt(price ?? 0),
-  });
-  const { data: registerFidTxHash, write } = useContractWrite(config);
+  const {
+    data: registerFidTxHash,
+    writeContract: write,
+    isError,
+    error,
+  } = useWriteContract();
 
   const {
     data: txFid,
     isLoading,
     isSuccess: isSuccessTx,
-  } = useWaitForTransaction({
-    hash: registerFidTxHash?.hash,
+  } = useWaitForTransactionReceipt({
+    hash: registerFidTxHash,
   });
 
   const registerFid = async () => {
     if (isError) {
       toast.error("Error registering FID", { description: error?.message });
     } else {
-      write?.();
+      write({
+        address: "0x00000000Fc25870C6eD6b6c7E41Fb078b7656f69",
+        abi: IdGatewayABI,
+        functionName: "register",
+        args: [recoveryAddress],
+        value: BigInt(price ?? 0),
+      });
     }
   };
 
@@ -65,7 +68,7 @@ export default function RegisterFIDButton({
 
   useEffect(() => {
     if (!!registerFidTxHash) {
-      setRegisterFidTxHash(registerFidTxHash.hash);
+      setRegisterFidTxHash(registerFidTxHash);
     }
   }, [registerFidTxHash]);
 
@@ -74,8 +77,8 @@ export default function RegisterFIDButton({
       disabled={
         !isConnected ||
         address === undefined ||
-        fid !== 0 ||
-        !/^(0x)?[0-9a-fA-F]{40}$/i.test(recoveryAddress) ||
+        fid !== null ||
+        !isAddress(recoveryAddress) ||
         recoveryAddress.toLowerCase() === address.toLowerCase()
       }
       onClick={() => registerFid()}

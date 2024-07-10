@@ -9,7 +9,7 @@ import RegisterFNameButton from "./RegisterFNameButton";
 import SendCastButton from "./SendCastButton";
 
 import { useEffect, useState } from "react";
-import { useAccount, useContractRead, useNetwork } from "wagmi";
+import { useReadContract, useAccount, useChainId } from "wagmi";
 import { useFid } from "@/providers/fidContext";
 import { useSigner } from "@/providers/signerContext";
 import { IdRegistryABI } from "@/abi/IdRegistryABI";
@@ -17,12 +17,13 @@ import { IdRegistryABI } from "@/abi/IdRegistryABI";
 import { Toaster } from "sonner";
 import axios from "axios";
 import { Hex } from "viem";
+import RegisterENSButton from "./RegisterENSButton";
 
 export default function Checklist() {
   const { address, isConnected } = useAccount();
   const { fid, setFid } = useFid();
   const { signer, setSigner } = useSigner();
-  const { chain } = useNetwork();
+  const chainId = useChainId();
 
   const [recoveryAddress, setRecoveryAddress] = useState<string>("");
   const [fname, setFname] = useState<string>("");
@@ -40,24 +41,22 @@ export default function Checklist() {
   const BLOCK_EXPLORER_URL = "https://optimistic.etherscan.io/"; // mainnet
   // const BLOCK_EXPLORER_URL = "https://goerli-optimism.etherscan.io/" // testnet
 
-  const { data: idOf } = useContractRead({
-    address: "0x00000000Fc6c5F01Fc30151999387Bb99A9f489b", // mainnet
+  const { data: idOf } = useReadContract({
+    address: address ? "0x00000000Fc6c5F01Fc30151999387Bb99A9f489b" : undefined, // mainnet
     // address: '0xb088Ff89329D74EdE2dD63C43c2951215910853D', // testnet
     abi: IdRegistryABI,
     functionName: "idOf",
     args: [address],
-    enabled: Boolean(address),
     chainId: 10, // mainnet
     // chainId: 420, // testnet
   });
 
-  const { data: recoveryOf } = useContractRead({
-    address: "0x00000000Fc6c5F01Fc30151999387Bb99A9f489b", // mainnet
+  const { data: recoveryOf } = useReadContract({
+    address: fid ? "0x00000000Fc6c5F01Fc30151999387Bb99A9f489b" : undefined, // mainnet
     // address: '0xb088Ff89329D74EdE2dD63C43c2951215910853D', // testnet
     abi: IdRegistryABI,
     functionName: "recoveryOf",
     args: [fid],
-    enabled: Boolean(fid),
     chainId: 10, // mainnet
     // chainId: 420, // testnet
   });
@@ -67,8 +66,8 @@ export default function Checklist() {
     if (idOf) {
       setFid(Number(idOf));
       setDisableRecoveryAddress(true);
-    } else if (chain?.id !== 1) {
-      setFid(0);
+    } else if (chainId !== 1) {
+      setFid(null);
     }
   }, [idOf]);
 
@@ -112,11 +111,12 @@ export default function Checklist() {
       setHasStorage(false);
     }
 
-    if (fid !== 0) {
+    if (fid !== null) {
       console.log("checking fname");
       axios
         .get(`https://fnames.farcaster.xyz/transfers?fid=${fid}`)
         .then(function (response) {
+          console.log(response.data.transfers);
           if (response.data.transfers.length > 0) {
             setFname(response.data.transfers[0].username); // mainnet
             setDisableFname(true); // mainnet
@@ -311,6 +311,32 @@ export default function Checklist() {
             disableFname={disableFname}
             setDisableFname={setDisableFname}
           />
+        </div>
+        <div className="relative flex items-start pb-4 pt-3.5">
+          <div className="min-w-0 flex-1 text-sm leading-6">
+            <label
+              htmlFor="offers"
+              className="font-medium text-gray-900 dark:text-white"
+            >
+              Register an fname{" "}
+              <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <p
+              id="offers-description"
+              className="text-gray-500 dark:text-gray-400"
+            >
+              Acquire a free offchain ENS username issued by Farcaster. <br />
+              You can also use onchain ENS names, but that's not covered here.
+            </p>
+            <a
+              href="https://github.com/wojtekwtf/farcaster-signup-demo/blob/main/src/components/RegisterFNameButton.tsx"
+              target="_blank"
+              className="text-gray-500 dark:text-gray-400 underline"
+            >
+              Go to code
+            </a>
+            <RegisterENSButton />
+          </div>
         </div>
         <div className="relative flex items-start pb-4 pt-3.5">
           <div className="min-w-0 flex-1 text-sm leading-6">

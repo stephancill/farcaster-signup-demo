@@ -1,20 +1,20 @@
 "use client";
 
-import { FC, PropsWithChildren } from "react";
-import { WagmiConfig, createConfig, mainnet } from "wagmi";
-import { optimism, optimismGoerli } from "wagmi/chains";
+import { WagmiProvider, createConfig, http } from "wagmi";
+import { mainnet, optimism } from "wagmi/chains";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ConnectKitProvider, getDefaultConfig } from "connectkit";
+import { ReactNode } from "react";
 
 const config = createConfig(
   getDefaultConfig({
     // Required API Keys
-    alchemyId: "wdTgzo6QiXtOb9HI8z-uqNaVfZ1PCLCP", // mainnet
     // alchemyId: "GM0NI7rm9xRUUFpPs6bT5wKsM2YTaCuR", // testnet
     walletConnectProjectId: "5a2cb35e0ed7f091a5c2c9a5cf4ed988",
-    chains: [optimism, mainnet],
 
     // Required
     appName: "Sign up for Farcaster",
+    chains: [optimism, mainnet],
 
     // Optional
     appDescription:
@@ -25,10 +25,16 @@ const config = createConfig(
   })
 );
 
-const Web3Provider: FC<PropsWithChildren<{}>> = ({ children }) => (
-  <WagmiConfig config={config}>
-    <ConnectKitProvider>{children}</ConnectKitProvider>
-  </WagmiConfig>
-);
+const queryClient = new QueryClient();
+
+export const Web3Provider = ({ children }: { children: ReactNode }) => {
+  return (
+    <WagmiProvider config={config}>
+      <QueryClientProvider client={queryClient}>
+        <ConnectKitProvider>{children}</ConnectKitProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
+  );
+};
 
 export default Web3Provider;

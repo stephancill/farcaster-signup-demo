@@ -5,7 +5,7 @@ import { ConnectKitButton } from "connectkit";
 import CollectRegisterSigButton from "./CollectRegisterSigButton";
 
 import { useEffect, useState } from "react";
-import { useAccount, useContractRead, useNetwork } from "wagmi";
+import { useAccount, useReadContract, useChainId } from "wagmi";
 import { useFid } from "@/providers/fidContext";
 import { useSigner } from "@/providers/signerContext";
 import { IdRegistryABI } from "@/abi/IdRegistryABI";
@@ -22,7 +22,7 @@ export default function BundlerChecklist() {
   const { address, isConnected } = useAccount();
   const { fid, setFid } = useFid();
   const { setSigner } = useSigner();
-  const { chain } = useNetwork();
+  const chainId = useChainId();
 
   const [recoveryAddress, setRecoveryAddress] = useState<string>("");
   const [disableRecoveryAddress, setDisableRecoveryAddress] =
@@ -41,23 +41,21 @@ export default function BundlerChecklist() {
   const BLOCK_EXPLORER_URL = "https://optimistic.etherscan.io/"; // mainnet
   // const BLOCK_EXPLORER_URL = "https://goerli-optimism.etherscan.io/" // testnet
 
-  const { data: idOf } = useContractRead({
-    address: ID_REGISTRY_ADDRESS, // mainnet
+  const { data: idOf } = useReadContract({
+    address: Boolean(address) ? ID_REGISTRY_ADDRESS : undefined, // mainnet
     abi: IdRegistryABI,
     functionName: "idOf",
     args: [address],
-    enabled: Boolean(address),
     chainId: 10, // mainnet
     // chainId: 420, // testnet
   });
 
-  const { data: recoveryOf } = useContractRead({
-    address: ID_REGISTRY_ADDRESS, // mainnet
+  const { data: recoveryOf } = useReadContract({
+    address: Boolean(fid) ? ID_REGISTRY_ADDRESS : undefined, // mainnet
     // address: '0xb088Ff89329D74EdE2dD63C43c2951215910853D', // testnet
     abi: IdRegistryABI,
     functionName: "recoveryOf",
     args: [fid],
-    enabled: Boolean(fid),
     chainId: 10, // mainnet
     // chainId: 420, // testnet
   });
@@ -77,8 +75,8 @@ export default function BundlerChecklist() {
     console.log("Your FID is: " + idOf);
     if (idOf) {
       setFid(Number(idOf));
-    } else if (chain?.id !== 1) {
-      setFid(0);
+    } else if (chainId !== 1) {
+      setFid(null);
     }
   }, [idOf]);
 

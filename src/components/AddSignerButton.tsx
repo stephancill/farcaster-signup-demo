@@ -5,10 +5,9 @@ import {
 } from "@farcaster/hub-web";
 
 import {
-  usePrepareContractWrite,
-  useContractWrite,
+  useWriteContract,
   useAccount,
-  useWaitForTransaction,
+  useWaitForTransactionReceipt,
   useWalletClient,
 } from "wagmi";
 import * as ed from "@noble/ed25519";
@@ -41,33 +40,21 @@ export default function AddSignerButton({
   const { data: walletClient } = useWalletClient();
 
   const {
-    config,
-    isSuccess: isSuccessPrepare,
-    isError: isErrorPrepareContractWrite,
-    error: errorPrepareContractWrite,
-  } = usePrepareContractWrite({
-    address: KEY_GATEWAY_ADDRESS,
-    abi: KeyGatewayABI,
-    functionName: "add",
-    args: [1, publicKey, 1, metadata],
-    enabled: Boolean(metadata),
-  });
-
-  const {
-    data: txData,
+    data: txHash,
     isError: isErrorContractWrite,
     error: errorContractWrite,
-    write: writeAddSigner,
-  } = useContractWrite(config);
+    writeContract: writeAddSigner,
+  } = useWriteContract();
 
   const { isLoading: isLoadingTx, isSuccess: isSuccessTx } =
-    useWaitForTransaction({
-      hash: txData?.hash,
+    useWaitForTransactionReceipt({
+      hash: txHash,
     });
 
   const addSigner = useCallback(async () => {
     if (walletClient && fid && publicKey && deadline) {
       setIsLoadingSign(true);
+      // @ts-ignore -- viem wallet types are weird
       const eip712signer = new ViemWalletEip712Signer(walletClient);
       const metadata = await eip712signer.getSignedKeyRequestMetadata({
         requestFid: BigInt(fid),
@@ -108,30 +95,30 @@ export default function AddSignerButton({
 
   useEffect(() => {
     // This will trigger the tx signing prompt once the tx is prepared and simulated by wagmi
-    if (isSuccessPrepare && !!metadata && !!deadline && !signer) {
+    if (!!metadata && !!deadline && !signer) {
       // this may be buggy: isSuccessPrepare can trigger randomly in wrong moments
       // but at least we have a check that it wont once we have a signer
-      writeAddSigner?.();
+      writeAddSigner({
+        address: KEY_GATEWAY_ADDRESS,
+        abi: KeyGatewayABI,
+        functionName: "add",
+        args: [1, publicKey, 1, metadata],
+      });
     }
-  }, [isSuccessPrepare]);
+  }, [metadata, deadline, signer]);
 
   useEffect(() => {
     if (!signer) {
-      if (isErrorPrepareContractWrite) {
-        toast.error(errorPrepareContractWrite?.message);
-      }
-      if (isErrorContractWrite) {
-        toast.error(errorContractWrite?.message);
-      }
+      toast.error(errorContractWrite?.message);
     }
-  }, [isErrorPrepareContractWrite, isErrorContractWrite]);
+  }, [isErrorContractWrite]);
 
   useEffect(() => {
     const signerPublicKeyLocalStorageKey = `signerPublicKey-${fid}`;
     const signerPrivateKeyLocalStorageKey = `signerPrivateKey-${fid}`;
 
     if (isLoadingTx) {
-      console.log(`https://optimistic.etherscan.io/tx/${txData?.hash}`);
+      console.log(`https://optimistic.etherscan.io/tx/${txHash}`);
     }
 
     if (isSuccessTx === true) {
@@ -158,10 +145,10 @@ export default function AddSignerButton({
   }, [isLoadingTx, isSuccessTx]);
 
   useEffect(() => {
-    if (!!txData) {
-      setAddSignerTxHash(txData.hash);
+    if (!!txHash) {
+      setAddSignerTxHash(txHash);
     }
-  }, [txData]);
+  }, [txHash]);
 
   return (
     <button

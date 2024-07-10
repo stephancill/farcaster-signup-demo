@@ -1,9 +1,8 @@
 import {
-  usePrepareContractWrite,
-  useContractWrite,
+  useWriteContract,
   useAccount,
-  useWaitForTransaction,
-  useContractRead,
+  useReadContract,
+  useWaitForTransactionReceipt,
 } from "wagmi";
 
 import { useEffect, useState } from "react";
@@ -35,7 +34,7 @@ export default function BundlerRegisterButton({
   const { signerPublicKey } = useSigner();
   const { address, isConnected } = useAccount();
 
-  const { data: price }: { data: bigint | undefined } = useContractRead({
+  const { data: price }: { data: bigint | undefined } = useReadContract({
     address: BUNDLER_ADDRESS,
     abi: bundlerABI,
     functionName: "price",
@@ -43,47 +42,63 @@ export default function BundlerRegisterButton({
     chainId: 10,
   });
 
-  const { config, isError, error } = usePrepareContractWrite({
-    address: BUNDLER_ADDRESS,
-    abi: bundlerABI,
-    functionName: "register",
-    args: [
-      {
-        to: burnerAccount?.address ?? zeroAddress,
-        recovery: address ?? zeroAddress,
-        deadline: BigInt(deadline),
-        sig: registerSig,
-      },
-      [
-        {
-          keyType: 1,
-          key: signerPublicKey ?? "0x00",
-          metadataType: 1,
-          metadata: metadata,
-          deadline: BigInt(deadline),
-          sig: addKeySig,
-        },
-      ],
-      BigInt(0),
-    ],
-    enabled: Boolean(price && registerSig && addKeySig && metadata),
-    value: BigInt(price ?? 0),
-  });
-  const { data: registerTxHash, write } = useContractWrite(config);
+  const {
+    data: registerTxHash,
+    writeContract,
+    isError,
+    error,
+  } = useWriteContract();
 
   const {
     data: txFid,
     isLoading,
     isSuccess: isSuccessTx,
-  } = useWaitForTransaction({
-    hash: registerTxHash?.hash,
+  } = useWaitForTransactionReceipt({
+    hash: registerTxHash,
   });
+
+  // const {
+  //   data: txFid,
+  //   isLoading,
+  //   isSuccess: isSuccessTx,
+  // } = useWaitForTransaction({
+  //   hash: registerTxHash?.hash,
+  // });
 
   const register = async () => {
     if (isError) {
       toast.error("Error registering", { description: error?.message });
     } else {
-      write?.();
+      if (!Boolean(price && registerSig && addKeySig && metadata)) {
+        toast.error("Missing required fields");
+        return;
+      }
+
+      writeContract({
+        address: BUNDLER_ADDRESS,
+        abi: bundlerABI,
+        functionName: "register",
+        args: [
+          {
+            to: burnerAccount?.address ?? zeroAddress,
+            recovery: address ?? zeroAddress,
+            deadline: BigInt(deadline),
+            sig: registerSig,
+          },
+          [
+            {
+              keyType: 1,
+              key: signerPublicKey ?? "0x00",
+              metadataType: 1,
+              metadata: metadata,
+              deadline: BigInt(deadline),
+              sig: addKeySig,
+            },
+          ],
+          BigInt(0),
+        ],
+        value: BigInt(price ?? 0),
+      });
     }
   };
 
@@ -97,7 +112,7 @@ export default function BundlerRegisterButton({
 
   useEffect(() => {
     if (!!registerTxHash) {
-      setRegisterTxHash(registerTxHash.hash);
+      setRegisterTxHash(registerTxHash);
     }
   }, [registerTxHash]);
 
