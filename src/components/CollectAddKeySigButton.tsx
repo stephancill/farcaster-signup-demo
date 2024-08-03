@@ -33,6 +33,7 @@ export default function CollectAddKeySigButton({
     if (burnerAccount && metadata && signerPublicKey && deadline) {
       setIsLoading(true);
 
+      // @ts-ignore
       const userEip712signer = new ViemLocalEip712Signer(burnerAccount);
       const sig = await userEip712signer.signAdd({
         key: hexToBytes(signerPublicKey),

@@ -26,6 +26,7 @@ export default function CollectRegisterSigButton({
   const collectRegisterSig = useCallback(async () => {
     if (burnerAccount && address && deadline) {
       setIsLoading(true);
+      // @ts-ignore
       const eip712signer = new ViemLocalEip712Signer(burnerAccount);
       const sig = await eip712signer.signRegister({
         to: burnerAccount.address,

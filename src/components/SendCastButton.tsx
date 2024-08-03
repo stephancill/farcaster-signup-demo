@@ -2,7 +2,9 @@ import {
   FarcasterNetwork,
   makeCastAdd,
   NobleEd25519Signer,
-  Message
+  Message,
+  CastAddBody,
+  CastType
 } from '@farcaster/hub-web';
 import { useAccount } from 'wagmi';
 import { useState } from 'react';
@@ -22,6 +24,11 @@ export default function SendCastButton({ castText, castHash, setCastHash }: { ca
   const [isSending, setIsSending] = useState(false)
 
   const sendCast = async () => {
+    if (!fid) {
+      toast.error("FID not found")
+      return
+    }
+
 
     if (castText.length === 0) {
       toast.error("Cast can't be empty")
@@ -40,6 +47,7 @@ export default function SendCastButton({ castText, castHash, setCastHash }: { ca
         embedsDeprecated: [],
         mentions: [],
         mentionsPositions: [],
+        type: CastType.CAST
       },
       messageDataOptions,
       signer as NobleEd25519Signer // function can only be called if signer is defined

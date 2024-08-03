@@ -33,7 +33,7 @@ export default function GenerateSignedKeyMetadataButton({
   const generateSignedKeyMetadata = useCallback(async () => {
     if (walletClient && signerPublicKey && deadline && address) {
       setIsLoading(true);
-
+      // @ts-ignore -- viem wallet types are weird
       const appEip712signer = new ViemWalletEip712Signer(walletClient);
       const metadata = await appEip712signer.getSignedKeyRequestMetadata({
         requestFid: BigInt(fid ?? 0),
